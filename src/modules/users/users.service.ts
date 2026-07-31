@@ -22,4 +22,10 @@ export class UsersService {
 
     return this.usersRepository.save(user);
   }
+
+  findById(id: string): Promise<User | null> {
+    return this.usersRepository.findOne({
+      where: { id },
+    });
+  }
 }
