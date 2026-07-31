@@ -8,10 +8,14 @@ import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { JwtService } from '@nestjs/jwt';
 
 @Injectable()
 export class AuthService {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly jwtService: JwtService,
+  ) {}
 
   async register(registerDto: RegisterDto) {
     const email = registerDto.email.toLowerCase().trim();
@@ -57,10 +61,18 @@ export class AuthService {
       throw new UnauthorizedException('E-mail ou senha inválidos');
     }
 
-    return {
-      id: user.id,
-      name: user.name,
+    const accessToken = await this.jwtService.signAsync({
+      sub: user.id,
       email: user.email,
+    });
+
+    return {
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+      },
+      accessToken,
     };
   }
 }
