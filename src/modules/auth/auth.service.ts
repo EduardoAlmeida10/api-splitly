@@ -3,18 +3,19 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
 
 import { UsersService } from '../users/users.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
+import { BcryptService } from './hashing/bcrypt.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
+    private readonly bcryptService: BcryptService,
   ) {}
 
   async register(registerDto: RegisterDto) {
@@ -26,12 +27,10 @@ export class AuthService {
       throw new ConflictException('E-mail já cadastrado');
     }
 
-    const hashedPassword = await bcrypt.hash(registerDto.password, 12);
-
     const user = await this.usersService.create({
       name: registerDto.name.trim(),
       email,
-      password: hashedPassword,
+      password: await this.bcryptService.hash(registerDto.password),
     });
 
     return {
@@ -52,7 +51,7 @@ export class AuthService {
       throw new UnauthorizedException('E-mail ou senha inválidos');
     }
 
-    const passwordMatches = await bcrypt.compare(
+    const passwordMatches = await this.bcryptService.compare(
       loginDto.password,
       user.password,
     );
