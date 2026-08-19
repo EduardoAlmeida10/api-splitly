@@ -42,4 +42,19 @@ export class PasswordRecovery {
 
   @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
   createdAt!: Date;
+
+  @Column({
+    name: 'reset_token_hash',
+    type: 'varchar',
+    length: 64,
+    nullable: true,
+  })
+  resetTokenHash!: string | null;
+
+  @Column({
+    name: 'reset_token_expires_at',
+    type: 'timestamptz',
+    nullable: true,
+  })
+  resetTokenExpiresAt!: Date | null;
 }
