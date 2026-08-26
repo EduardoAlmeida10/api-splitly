@@ -28,4 +28,8 @@ export class UsersService {
       where: { id },
     });
   }
+
+  async updatePassword(userId: string, password: string): Promise<void> {
+    await this.usersRepository.update({ id: userId }, { password });
+  }
 }
