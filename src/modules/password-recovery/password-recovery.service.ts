@@ -10,6 +10,7 @@ import { UsersService } from '../users/users.service';
 import { RequestPasswordRecoveryDto } from './dto/request-password-recovery.dto';
 import { VerifyPasswordRecoveryDto } from './dto/verify-password-recovery.dto';
 import { PasswordRecovery } from './entities/password-recovery.entity';
+import { ResetPasswordDto } from './dto/reset-password.dto';
 
 @Injectable()
 export class PasswordRecoveryService {
@@ -146,6 +147,55 @@ export class PasswordRecoveryService {
     return {
       resetToken,
     };
+  }
+
+  async resetPassword(dto: ResetPasswordDto): Promise<void> {
+    if (dto.password !== dto.confirmPassword) {
+      throw new BadRequestException('As senhas não coincidem');
+    }
+
+    const resetTokenHash = this.hashResetToken(dto.resetToken);
+
+    const recovery = await this.passwordRecoveryRepository.findOne({
+      where: {
+        resetTokenHash,
+        usedAt: IsNull(),
+      },
+    });
+
+    if (!recovery) {
+      throw new BadRequestException('Token inválido ou expirado');
+    }
+
+    if (!recovery.verifiedAt) {
+      throw new BadRequestException('Token inválido ou expirado');
+    }
+
+    const now = new Date();
+
+    if (!recovery.resetTokenExpiresAt || recovery.resetTokenExpiresAt <= now) {
+      recovery.usedAt = now;
+
+      await this.passwordRecoveryRepository.save(recovery);
+
+      throw new BadRequestException('Token inválido ou expirado');
+    }
+
+    const user = await this.usersService.findById(recovery.userId);
+
+    if (!user) {
+      throw new BadRequestException('Token inválido ou expirado');
+    }
+
+    const hashedPassword = await bcrypt.hash(dto.password, 12);
+
+    await this.usersService.updatePassword(user.id, hashedPassword);
+
+    recovery.usedAt = now;
+    recovery.resetTokenHash = null;
+    recovery.resetTokenExpiresAt = null;
+
+    await this.passwordRecoveryRepository.save(recovery);
   }
 
   private async invalidatePreviousRecoveries(userId: string): Promise<void> {
